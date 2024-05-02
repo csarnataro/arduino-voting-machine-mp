@@ -7,11 +7,13 @@ send data to the Arduino Cloud via Micropython.
 
 ## What's inside
 
-<img src="https://github.com/csarnataro/arduino-voting-machine-mp/assets/11388820/dfc004ca-aa78-4469-865e-a766d36afbe3" alt="An Arduino Nano Rp2040 mounted on a breadboard" width="400">
+<img src="https://github.com/csarnataro/arduino-voting-machine-mp/assets/11388820/4c40825a-ad50-47ac-887e-a1d629ca4c69" alt="An Arduino Nano Rp2040 mounted on a breadboard" width="400">
 
-The yellow wire corresponds to "JavaScript votes", the blue to "TypeScript votes", the black wire (of course) is GND. And there's a buzzer too!
+The yellow button corresponds to "JavaScript votes", the blue to "TypeScript votes". And there's a buzzer too!
 
-When a user pushes the yellow button, the yellow wire is grounded and this sends a vote for JS to the Arduino Cloud.
+Each button is connected to its own pin (in [INPUT_PULLUP mode](https://docs.arduino.cc/tutorials/generic/digital-input-pullup/)) and to GND. 
+
+Each time a button is pressed, a vote is sent to the Arduino Cloud.
 
 ## Usage
 
@@ -19,8 +21,8 @@ You can setup your environment following the instructions available
 at https://docs.arduino.cc/micropython/micropython-course/course/introduction-arduino/
 and https://docs.arduino.cc/arduino-cloud/guides/micropython/
 
-The examples in these documents are using mostly an Arduino Nano ESP32, 
-nevertheless everything should work seamlessly for the Arduino Nano RP2040 as well. 
+The examples in these documents are mostly using an Arduino Nano ESP32, 
+anyway everything should work seamlessly for the Arduino Nano RP2040 as well. 
 
 The basic steps are:
 - Install the firmware on your board using the Arduino Micropython installer (see https://labs.arduino.cc/en/labs/micropython-installer)
@@ -32,7 +34,9 @@ The basic steps are:
   - int buttonPushCounterJS;
   - int buttonPushCounterTS;
 - Configure your Arduino Nano RP2040 as a "manual device" and download the PDF with the secret key
+- Download the code of this repo and open it in the Micropython IDE.
 - Add the downloaded secret key in file "secrets.py", along with your WiFi credentials
+- Connect the board
 - Launch the Micropython script and have fun
 
  
