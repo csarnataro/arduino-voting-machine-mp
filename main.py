@@ -7,9 +7,9 @@ from time import sleep_ms
 
 from arduino_iot_cloud import ArduinoCloudClient
 from arduino_iot_cloud import Task
+from arduino_iot_cloud import async_wifi_connection
 
-from secrets import WIFI_SSID
-from secrets import WIFI_PASSWORD
+# WIFI_SSID and WIFI_PASS are loaded automatically by async_wifi_connection function
 from secrets import DEVICE_ID
 from secrets import CLOUD_PASSWORD
 
@@ -40,22 +40,18 @@ last_button_state_TS = BUTTON_UNPRESSED
 is_connected_to_cloud = False
 
 
-def on_js_percentage_change():
-    # empty
-    pass
+def on_js_percentage_change(client, value):
+  logging.info(f"on_js_percentage_change {value}")
 
-
-def on_ts_percentage_change():
-    # empty
-    pass
-
+def on_ts_percentage_change(client, value):
+  logging.info(f"on_ts_percentage_change {value}")
 
 def on_button_push_counter_TS_change(client, value):
-    pass
+  logging.info(f"on_button_push_counter_TS_change {value}")
 
 
 def on_button_push_counter_JS_change(client, value):
-    pass
+  logging.info(f"on_button_push_counter_JS_change {value}")
 
 def arduino_client_start():
     client = ArduinoCloudClient(
@@ -74,23 +70,15 @@ def arduino_client_start():
 
     client.register(Task("loop", on_run=loop, interval=0.01))
 
+    # This function is registered as a background task to reconnect to WiFi if it ever gets
+    # disconnected. Note, it can also be used for the initial WiFi connection, in synchronous
+    # mode, if it's called without any args (i.e, async_wifi_connection()) at the beginning of
+    # this script.
+    client.register(
+        Task("wifi_connection", on_run=async_wifi_connection, interval=10.0)
+    )
     # Start the Arduino Cloud client.
     client.start()
-
-
-def wifi_connect():
-    if not WIFI_SSID or not WIFI_PASSWORD:
-        raise (
-            Exception("Network is not configured. Set SSID and passwords in secrets.py")
-        )
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-    wlan.connect(WIFI_SSID, WIFI_PASSWORD)
-    while not wlan.isconnected():
-        logging.info(f"Trying to connect to {WIFI_SSID}. Note this may take a while...")
-        sleep_ms(500)
-    logging.info(f"WiFi Connected {wlan.ifconfig()} to {WIFI_SSID}")
-
 
 def play(frequency, duration=200):
   play_pwm(buzzer_pwm, frequency, duration)
@@ -106,19 +94,30 @@ def setup():
     
     logging.basicConfig(
         datefmt="%H:%M:%S",
-        format="%(asctime)s.%(msecs)03d %(message)s",
+        format="%(asctime)s %(message)s",
         level=logging.DEBUG,
     )
 
     logging.info("in setup")
     startup_blink()  
     startup_tone(buzzer_pwm)
-    wifi_connect()
     connection_tone(buzzer_pwm)
-  
-
     logging.info("end of setup")
 
+def update_percentages(client, js_votes, ts_votes):
+  logging.info(f"JS votes: {js_votes} - TS votes: {ts_votes}")
+  js_votes = 0 if js_votes is None else js_votes
+  ts_votes = 0 if ts_votes is None else ts_votes
+  if (js_votes + ts_votes > 0):
+    js_percentage = js_votes / (js_votes + ts_votes) * 100
+    logging.info(f"JS%: {js_percentage}")
+    ts_percentage = ts_votes / (js_votes + ts_votes) * 100
+    logging.info(f"TS%: {ts_percentage}")
+    client["jsPercentage"] = js_percentage
+    client["tsPercentage"] = ts_percentage
+  else:
+    client["jsPercentage"] = 0.0
+    client["tsPercentage"] = 0.0
 
 def loop(client):  
     # mimicing loop
@@ -138,8 +137,8 @@ def loop(client):
             remote_value = 1 if remote_value is None else remote_value + 1 
             client["buttonPushCounterJS"] = remote_value
             logging.info("ON: number of button pushes JS: %d", client["buttonPushCounterJS"])
+            update_percentages(client, client["buttonPushCounterJS"], client["buttonPushCounterTS"]);
             play(2 * 440, 200)
-            # updatePercentages(buttonPushCounterJS, buttonPushCounterTS);
 
     if button_state_TS != last_button_state_TS:
         if button_state_TS == BUTTON_PRESSED:
@@ -150,8 +149,8 @@ def loop(client):
             remote_value = 1 if remote_value is None else remote_value + 1
             client["buttonPushCounterTS"] = remote_value
             logging.info("ON: number of button pushes TS: %d", client["buttonPushCounterTS"])
+            update_percentages(client, client["buttonPushCounterJS"], client["buttonPushCounterTS"]);
             play(4 * 440, 200)
-          # updatePercentages(buttonPushCounterJS, buttonPushCounterTS);
     
     sleep_ms(50)
     builtin_led.off()
