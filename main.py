@@ -110,9 +110,8 @@ def update_percentages(client, js_votes, ts_votes):
   ts_votes = 0 if ts_votes is None else ts_votes
   if (js_votes + ts_votes > 0):
     js_percentage = js_votes / (js_votes + ts_votes) * 100
-    logging.info(f"JS%: {js_percentage}")
     ts_percentage = ts_votes / (js_votes + ts_votes) * 100
-    logging.info(f"TS%: {ts_percentage}")
+    logging.info(f"JS%: {js_percentage} - TS%: {ts_percentage}")
     client["jsPercentage"] = js_percentage
     client["tsPercentage"] = ts_percentage
   else:

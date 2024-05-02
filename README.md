@@ -40,3 +40,5 @@ The basic steps are:
 - Launch the Micropython script and have fun
 
  
+## Licence
+MIT
