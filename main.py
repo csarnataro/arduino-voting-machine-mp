@@ -69,6 +69,7 @@ def arduino_client_start():
     client.register("buttonPushCounterTS", on_write=on_button_push_counter_TS_change)
 
     client.register(Task("loop", on_run=loop, interval=0.01))
+    client.register(Task("check_connection", on_run=check_connection, interval=1.0))
 
     # This function is registered as a background task to reconnect to WiFi if it ever gets
     # disconnected. Note, it can also be used for the initial WiFi connection, in synchronous
@@ -101,7 +102,7 @@ def setup():
     logging.info("in setup")
     startup_blink()  
     startup_tone(buzzer_pwm)
-    connection_tone(buzzer_pwm)
+    # async_wifi_connection()
     logging.info("end of setup")
 
 def update_percentages(client, js_votes, ts_votes):
@@ -118,17 +119,33 @@ def update_percentages(client, js_votes, ts_votes):
     client["jsPercentage"] = 0.0
     client["tsPercentage"] = 0.0
 
+def check_connection(client): 
+  global is_connected_to_cloud
+  if not is_connected_to_cloud:
+    thing_id = client.thing_id
+    logging.info(f"******* CLIENT: {dir(client)}")
+    if thing_id is not None:
+      logging.info(f"******* Thing ID: {thing_id}")
+      connection_tone(buzzer_pwm)
+      is_connected_to_cloud = True
+      
+
 def loop(client):  
     # mimicing loop
     global button_state_JS
     global last_button_state_JS
     global button_state_TS
     global last_button_state_TS
+    global is_connected_to_cloud
+  
     button_state_JS = button_pin_JS.value()
     button_state_TS = button_pin_TS.value()
 
     if button_state_JS != last_button_state_JS:
         if button_state_JS == BUTTON_PRESSED:
+            if not is_connected_to_cloud:
+              play(220, 200)
+              return
             # if the current state is HIGH then the button went from off to on
             builtin_led.on()
             remote_value = client["buttonPushCounterJS"]
@@ -141,6 +158,10 @@ def loop(client):
 
     if button_state_TS != last_button_state_TS:
         if button_state_TS == BUTTON_PRESSED:
+            if not is_connected_to_cloud:
+              play(220, 200)
+              return
+
             # if the current state is HIGH then the button went from off to on
             builtin_led.on()
             remote_value = client["buttonPushCounterTS"]
